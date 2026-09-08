@@ -1,142 +1,178 @@
 const BACKEND_URL = "http://127.0.0.1:8080/optimize";
 
 // DOM Elements
-const selectWrapper = document.getElementById('aiSelectWrapper');
-const selectedAiText = document.getElementById('selectedAiText');
-const options = document.querySelectorAll('.custom-option');
-const optimizeBtn = document.getElementById('optimizeBtn');
+const sidebar = document.getElementById('sidebar');
+const menuToggle = document.getElementById('menuToggle');
+const closeSidebar = document.getElementById('closeSidebar');
+const modelSelectBtn = document.getElementById('modelSelectBtn');
+const selectedModelText = document.getElementById('selectedModelText');
+const modelOptions = document.querySelectorAll('.model-option');
 const promptInput = document.getElementById('promptInput');
-const outputContainer = document.getElementById('outputContainer');
-const optimizedOutput = document.getElementById('optimizedOutput');
-const copyBtn = document.getElementById('copyBtn');
-const tiltCard = document.getElementById('tiltCard');
+const optimizeBtn = document.getElementById('optimizeBtn');
+const chatContent = document.getElementById('chatContent');
+const greetingScreen = document.getElementById('greetingScreen');
+const chatWrapper = document.getElementById('chatWrapper');
 const historyList = document.getElementById('historyList');
 const newChatBtn = document.getElementById('newChatBtn');
 
-let selectedModel = null;
-let currentChatId = null;
+let selectedModel = 'Gemini 3.8 Flash'; // Default based on HTML
+let promptHistory = JSON.parse(localStorage.getItem('geminiPromptHistory')) || [];
 
 // ==========================================
-// 1. History & Local Storage Management
+// Sidebar & Navigation Logic
 // ==========================================
-let promptHistory = JSON.parse(localStorage.getItem('aiPromptHistory')) || [];
+menuToggle.addEventListener('click', () => {
+    if (window.innerWidth <= 768) {
+        sidebar.classList.toggle('open-mobile');
+    } else {
+        sidebar.classList.toggle('collapsed');
+    }
+});
 
-function saveHistory() {
-    localStorage.setItem('aiPromptHistory', JSON.stringify(promptHistory));
-    renderHistory();
-}
+closeSidebar.addEventListener('click', () => {
+    sidebar.classList.remove('open-mobile');
+});
 
+// Auto-adjust textarea height
+promptInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+});
+
+// Dropdown Logic
+modelSelectBtn.addEventListener('click', () => {
+    modelSelectBtn.classList.toggle('open');
+});
+
+document.addEventListener('click', (e) => {
+    if (!modelSelectBtn.contains(e.target)) {
+        modelSelectBtn.classList.remove('open');
+    }
+});
+
+modelOptions.forEach(option => {
+    option.addEventListener('click', (e) => {
+        selectedModel = e.target.getAttribute('data-value');
+        selectedModelText.textContent = selectedModel;
+    });
+});
+
+// ==========================================
+// History Logic
+// ==========================================
 function renderHistory() {
     historyList.innerHTML = '';
-    
-    if (promptHistory.length === 0) {
-        historyList.innerHTML = '<div style="color: #666; text-align: center; margin-top: 20px; font-size: 0.85rem;">No history yet</div>';
-        return;
-    }
-
     promptHistory.forEach(item => {
         const div = document.createElement('div');
-        div.className = `history-item ${item.id === currentChatId ? 'active' : ''}`;
+        div.className = 'history-item';
+        div.textContent = item.rawPrompt.length > 30 ? item.rawPrompt.substring(0, 30) + '...' : item.rawPrompt;
         
-        // Snippet logic for title
-        const titleSnippet = item.rawPrompt.length > 25 ? item.rawPrompt.substring(0, 25) + '...' : item.rawPrompt;
-        
-        div.innerHTML = `
-            <div class="history-title">${titleSnippet}</div>
-            <div class="history-meta">
-                <span>${item.model}</span>
-                <span>${item.date}</span>
-            </div>
-        `;
-        
-        div.addEventListener('click', () => loadHistoryItem(item));
+        div.addEventListener('click', () => {
+            if (window.innerWidth <= 768) sidebar.classList.remove('open-mobile');
+            loadConversation(item);
+        });
         historyList.appendChild(div);
     });
 }
 
-function loadHistoryItem(item) {
-    currentChatId = item.id;
+function loadConversation(item) {
+    greetingScreen.style.display = 'none';
+    
+    // Clear chat area except greeting screen
+    Array.from(chatContent.children).forEach(child => {
+        if (child.id !== 'greetingScreen') child.remove();
+    });
+
     selectedModel = item.model;
-    selectedAiText.textContent = selectedModel;
-    selectedAiText.style.color = "var(--text-primary)";
+    selectedModelText.textContent = selectedModel;
     
-    promptInput.value = item.rawPrompt;
-    optimizedOutput.textContent = item.optimizedOutput;
-    
-    outputContainer.style.display = 'block';
-    setTimeout(() => outputContainer.classList.remove('hidden'), 10);
-    renderHistory(); // Update active class
+    appendMessage('user', item.rawPrompt);
+    appendMessage('ai', item.optimizedOutput);
 }
 
 newChatBtn.addEventListener('click', () => {
-    currentChatId = null;
+    if (window.innerWidth <= 768) sidebar.classList.remove('open-mobile');
+    
+    greetingScreen.style.display = 'block';
     promptInput.value = '';
-    selectedModel = null;
-    selectedAiText.textContent = 'Select your AI Model...';
-    selectedAiText.style.color = "var(--text-secondary)";
-    outputContainer.classList.add('hidden');
-    setTimeout(() => { outputContainer.style.display = 'none'; }, 400);
-    renderHistory();
+    promptInput.style.height = 'auto';
+    
+    // Clear chat bubbles
+    Array.from(chatContent.children).forEach(child => {
+        if (child.id !== 'greetingScreen') child.remove();
+    });
 });
 
 // Initial Render
 renderHistory();
 
-
 // ==========================================
-// 2. Interactive 3D Mouse Tilt Effect
+// Chat UI & API Fetching Logic
 // ==========================================
-document.querySelector('.scene').addEventListener('mousemove', (e) => {
-    let xAxis = (window.innerWidth / 2 - e.pageX) / 60; 
-    let yAxis = (window.innerHeight / 2 - e.pageY) / 60;
-    tiltCard.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
-});
-
-document.querySelector('.scene').addEventListener('mouseleave', () => {
-    tiltCard.style.transform = `rotateY(0deg) rotateX(0deg)`;
-});
-
-
-// ==========================================
-// 3. Custom Scroll & Select Logic
-// ==========================================
-selectWrapper.addEventListener('click', () => {
-    selectWrapper.classList.toggle('open');
-});
-
-document.addEventListener('click', (e) => {
-    if (!selectWrapper.contains(e.target)) {
-        selectWrapper.classList.remove('open');
+function appendMessage(role, text) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message';
+    
+    const avatar = role === 'user' 
+        ? `<div class="avatar user-avatar">R</div>` 
+        : `<div class="avatar ai-avatar"><i class="fa-solid fa-wand-magic-sparkles"></i></div>`;
+    
+    // Convert newlines to HTML breaks or wrap in pre tags for code formatting
+    const formattedText = role === 'ai' ? `<pre>${text}</pre>` : text;
+    
+    let copyButtonHTML = '';
+    if (role === 'ai') {
+        copyButtonHTML = `
+        <div class="action-row">
+            <button class="icon-btn copy-btn" title="Copy to clipboard"><i class="fa-regular fa-copy"></i></button>
+        </div>`;
     }
-});
 
-options.forEach(option => {
-    option.addEventListener('click', (e) => {
-        selectedModel = e.target.getAttribute('data-value');
-        selectedAiText.textContent = selectedModel;
-        selectedAiText.style.color = "var(--text-primary)";
-    });
-});
+    messageDiv.innerHTML = `
+        ${avatar}
+        <div class="message-content">
+            <div class="text-content">${formattedText}</div>
+            ${copyButtonHTML}
+        </div>
+    `;
 
+    chatContent.appendChild(messageDiv);
+    chatWrapper.scrollTop = chatWrapper.scrollHeight;
 
-// ==========================================
-// 4. API Fetch & Optimization Logic
-// ==========================================
+    // Attach copy event listener if AI
+    if (role === 'ai') {
+        const copyBtn = messageDiv.querySelector('.copy-btn');
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(text);
+            copyBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            copyBtn.style.color = '#a8c7fa';
+            setTimeout(() => {
+                copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                copyBtn.style.color = 'var(--text-secondary)';
+            }, 2000);
+        });
+    }
+
+    // Return the text container so we can update it (e.g. from "loading..." to actual text)
+    return messageDiv.querySelector('.text-content pre') || messageDiv.querySelector('.text-content');
+}
+
 optimizeBtn.addEventListener('click', async () => {
     const rawPrompt = promptInput.value.trim();
-    
-    if (!selectedModel) {
-        alert("Please select an AI model from the dropdown first!");
-        return;
-    }
     if (!rawPrompt) return;
 
-    // Loading State
-    const btnText = optimizeBtn.querySelector('.btn-text');
-    const btnIcon = optimizeBtn.querySelector('i');
-    btnText.textContent = 'Optimizing...';
-    btnIcon.className = 'fa-solid fa-circle-notch fa-spin';
+    // Hide greeting, append user message, clear input
+    greetingScreen.style.display = 'none';
+    appendMessage('user', rawPrompt);
+    promptInput.value = '';
+    promptInput.style.height = 'auto';
+
+    // Append AI placeholder
+    const aiTextContainer = appendMessage('ai', 'Optimizing and aligning formatting for ' + selectedModel + '...');
+    
+    // Disable input while fetching
     optimizeBtn.disabled = true;
+    promptInput.disabled = true;
 
     try {
         const response = await fetch(BACKEND_URL, {
@@ -146,144 +182,37 @@ optimizeBtn.addEventListener('click', async () => {
         });
         
         const data = await response.json();
-        const resultText = data.optimized_prompt || "Error: " + data.error;
+        const finalOutput = data.optimized_prompt || "Error: " + data.error;
         
-        optimizedOutput.textContent = resultText;
-        outputContainer.style.display = 'block';
-        setTimeout(() => outputContainer.classList.remove('hidden'), 10);
+        // Update the placeholder bubble
+        aiTextContainer.textContent = finalOutput;
 
         // Save to History
         if (data.optimized_prompt) {
-            const newItem = {
-                id: Date.now().toString(),
+            promptHistory.unshift({
                 rawPrompt: rawPrompt,
                 model: selectedModel,
-                optimizedOutput: resultText,
-                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-            };
-            
-            // Add to beginning of array
-            promptHistory.unshift(newItem);
-            currentChatId = newItem.id;
-            saveHistory();
+                optimizedOutput: finalOutput,
+                id: Date.now()
+            });
+            localStorage.setItem('geminiPromptHistory', JSON.stringify(promptHistory));
+            renderHistory();
         }
         
     } catch (error) {
-        optimizedOutput.textContent = "Failed to connect to the backend server. Make sure it's running on port 8080.";
-        outputContainer.style.display = 'block';
-        setTimeout(() => outputContainer.classList.remove('hidden'), 10);
+        aiTextContainer.textContent = "Connection Error. Ensure your Python backend is running locally on port 8080.";
     }
 
-    // Reset Button
-    btnText.textContent = 'Optimize';
-    btnIcon.className = 'fa-solid fa-wand-magic-sparkles';
+    // Re-enable input
     optimizeBtn.disabled = false;
+    promptInput.disabled = false;
+    promptInput.focus();
 });
 
-// Copy button
-copyBtn.addEventListener('click', () => {
-    navigator.clipboard.writeText(optimizedOutput.textContent);
-    const originalHTML = copyBtn.innerHTML;
-    copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
-    copyBtn.style.color = '#2dd4bf';
-    setTimeout(() => {
-        copyBtn.innerHTML = originalHTML;
-        copyBtn.style.color = 'var(--text-secondary)';
-    }, 2000);
+// Allow Enter key to send (Shift+Enter for new line)
+promptInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        optimizeBtn.click();
+    }
 });
-
-
-// ==========================================
-// 5. Advanced 3D Neural Network Canvas
-// ==========================================
-const canvas = document.getElementById('bgCanvas');
-const ctx = canvas.getContext('2d');
-let width, height;
-let particles = [];
-let mouse = { x: null, y: null };
-
-function resize() {
-    width = canvas.width = window.innerWidth;
-    height = canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resize);
-resize();
-
-// Particle setup
-class Particle {
-    constructor() {
-        this.x = Math.random() * width;
-        this.y = Math.random() * height;
-        this.z = Math.random() * 2; // depth
-        this.vx = (Math.random() - 0.5) * 0.5;
-        this.vy = (Math.random() - 0.5) * 0.5;
-        this.size = Math.random() * 2 + 0.5;
-    }
-    update() {
-        // Slight parallax mouse reaction
-        if (mouse.x) {
-            let dx = mouse.x - this.x;
-            let dy = mouse.y - this.y;
-            let distance = Math.sqrt(dx*dx + dy*dy);
-            if (distance < 200) {
-                this.x -= (dx / distance) * 0.5;
-                this.y -= (dy / distance) * 0.5;
-            }
-        }
-        
-        this.x += this.vx;
-        this.y += this.vy;
-        
-        if (this.x < 0 || this.x > width) this.vx *= -1;
-        if (this.y < 0 || this.y > height) this.vy *= -1;
-    }
-    draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(45, 212, 191, ${0.5 - this.z/4})`;
-        ctx.fill();
-    }
-}
-
-// Generate particles
-for (let i = 0; i < 100; i++) {
-    particles.push(new Particle());
-}
-
-// Mouse tracking for canvas
-window.addEventListener('mousemove', (e) => {
-    mouse.x = e.x;
-    mouse.y = e.y;
-});
-window.addEventListener('mouseout', () => {
-    mouse.x = null;
-    mouse.y = null;
-});
-
-// Animation Loop
-function animate() {
-    ctx.clearRect(0, 0, width, height);
-    
-    // Draw and connect particles
-    for (let i = 0; i < particles.length; i++) {
-        particles[i].update();
-        particles[i].draw();
-        
-        for (let j = i; j < particles.length; j++) {
-            let dx = particles[i].x - particles[j].x;
-            let dy = particles[i].y - particles[j].y;
-            let dist = Math.sqrt(dx*dx + dy*dy);
-            
-            if (dist < 120) {
-                ctx.beginPath();
-                ctx.strokeStyle = `rgba(139, 92, 246, ${1 - dist/120})`;
-                ctx.lineWidth = 0.5;
-                ctx.moveTo(particles[i].x, particles[i].y);
-                ctx.lineTo(particles[j].x, particles[j].y);
-                ctx.stroke();
-            }
-        }
-    }
-    requestAnimationFrame(animate);
-}
-animate();
