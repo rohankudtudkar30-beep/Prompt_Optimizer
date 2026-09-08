@@ -1,79 +1,84 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Prompt Optimizer Pro</title>
+    <title>Prompt Optimizer Pro</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Google Fonts for that clean Gemini typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- 3D Interactive Background -->
-    <canvas id="bgCanvas"></canvas>
+    <div class="app-container">
+        <!-- The Ambient Background Image -->
+        <div class="ambient-bg"></div>
 
-    <div class="app-layout">
-        <!-- Sidebar for History -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h2><i class="fa-solid fa-clock-rotate-left"></i> History</h2>
-                <button id="newChatBtn" class="icon-btn tooltip" data-tooltip="New Prompt"><i class="fa-solid fa-pen-to-square"></i></button>
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-top">
+                <button id="closeSidebar" class="icon-btn mobile-only"><i class="fa-solid fa-xmark"></i></button>
+                <button class="new-chat-btn" id="newChatBtn">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>New prompt</span>
+                </button>
             </div>
+            <div class="recent-label">Recent History</div>
             <div class="history-list" id="historyList">
-                <!-- History items injected here via JS -->
+                <!-- History populates here -->
             </div>
         </aside>
 
         <!-- Main Workspace -->
-        <main class="scene">
-            <div class="main-card" id="tiltCard">
-                <header class="pop-out">
-                    <h1>Prompt<span class="highlight">Optimizer</span></h1>
-                    <p>Craft the perfect prompt for any intelligence.</p>
-                </header>
-
-                <div class="interaction-area pop-out">
-                    <!-- Custom Scroll & Select -->
-                    <div class="custom-select-wrapper" id="aiSelectWrapper">
-                        <div class="custom-select-trigger">
-                            <span id="selectedAiText">Select your AI Model...</span>
-                            <i class="fa-solid fa-chevron-down"></i>
-                        </div>
-                        <div class="custom-options">
-                            <div class="option-group">Anthropic</div>
-                            <div class="custom-option" data-value="Claude Sonnet 5">Claude Sonnet 5</div>
-                            <div class="custom-option" data-value="Claude 3.5 Sonnet">Claude 3.5 Sonnet</div>
-                            
-                            <div class="option-group">Google</div>
-                            <div class="custom-option" data-value="Gemini 3.8 Flash">Gemini 3.8 Flash</div>
-                            <div class="custom-option" data-value="Gemini 3.5 Flash Lite">Gemini 3.5 Flash Lite</div>
-                            <div class="custom-option" data-value="Gemini 3.1 Pro">Gemini 3.1 Pro</div>
-                            <div class="custom-option" data-value="Gemini 2.0 Flash">Gemini 2.0 Flash</div>
-                            
-                            <div class="option-group">OpenAI</div>
-                            <div class="custom-option" data-value="GPT-4o">GPT-4o</div>
-                            <div class="custom-option" data-value="o1-preview">o1-preview (Reasoning)</div>
-                        </div>
-                    </div>
-
-                    <!-- Input Area -->
-                    <div class="input-wrapper">
-                        <textarea id="promptInput" placeholder="Describe your task vaguely... (e.g., 'write an email asking for leave')"></textarea>
-                        <button id="optimizeBtn" class="primary-btn">
-                            <span class="btn-text">Optimize</span>
-                            <i class="fa-solid fa-wand-magic-sparkles"></i>
-                        </button>
+        <main class="main-content">
+            <!-- Top Nav -->
+            <nav class="top-nav">
+                <button id="menuToggle" class="icon-btn tooltip" aria-label="Toggle Sidebar"><i class="fa-solid fa-bars"></i></button>
+                
+                <div class="model-dropdown-wrapper" id="modelSelectBtn">
+                    <span id="selectedModelText">Gemini 3.8 Flash</span>
+                    <i class="fa-solid fa-caret-down"></i>
+                    
+                    <div class="model-dropdown-menu" id="modelDropdownMenu">
+                        <div class="option-group">Google Models</div>
+                        <div class="model-option" data-value="Gemini 3.8 Flash">Gemini 3.8 Flash</div>
+                        <div class="model-option" data-value="Gemini 3.5 Flash Lite">Gemini 3.5 Flash Lite</div>
+                        <div class="model-option" data-value="Gemini 3.1 Pro">Gemini 3.1 Pro</div>
+                        <div class="model-option" data-value="Gemini 2.0 Flash">Gemini 2.0 Flash</div>
+                        
+                        <div class="option-group">Anthropic</div>
+                        <div class="model-option" data-value="Claude Sonnet 5">Claude Sonnet 5</div>
+                        <div class="model-option" data-value="Claude 3.5 Sonnet">Claude 3.5 Sonnet</div>
+                        
+                        <div class="option-group">OpenAI</div>
+                        <div class="model-option" data-value="GPT-4o">GPT-4o</div>
+                        <div class="model-option" data-value="o1-preview">o1-preview (Reasoning)</div>
                     </div>
                 </div>
+                <div class="spacer"></div>
+            </nav>
 
-                <!-- Output Area -->
-                <div id="outputContainer" class="output-wrapper hidden pop-out">
-                    <div class="output-header">
-                        <span class="badge">Optimized</span>
-                        <button id="copyBtn" class="icon-btn"><i class="fa-regular fa-copy"></i> Copy</button>
+            <!-- Chat / Content Area -->
+            <div class="chat-wrapper" id="chatWrapper">
+                <div class="chat-content" id="chatContent">
+                    
+                    <!-- Greeting Screen -->
+                    <div class="greeting-screen" id="greetingScreen">
+                        <h1><span class="gradient-text">Hello, Rohan</span></h1>
+                        <h2>What prompt shall we optimize today?</h2>
                     </div>
-                    <div id="optimizedOutput" class="output-content"></div>
+
+                    <!-- Messages will be injected here via JS -->
                 </div>
+            </div>
+
+            <!-- Bottom Input Area -->
+            <div class="input-section">
+                <div class="input-box">
+                    <textarea id="promptInput" placeholder="Enter your raw, vague prompt here..."></textarea>
+                    <button id="optimizeBtn" class="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+                <p class="disclaimer">Prompt Optimizer can make mistakes. Please verify critical parameters.</p>
             </div>
         </main>
     </div>
