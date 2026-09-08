@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Optimizer</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <button id="themeToggle" class="icon-btn"><i class="fa-solid fa-sun"></i></button>
+
+    <div class="container">
+        <header>
+            <h1><i class="fa-solid fa-wand-magic-sparkles"></i> Prompt Optimizer</h1>
+            <p>Select your target AI and drop in your draft.</p>
+        </header>
+
+        <div class="models-container">
+            <button class="model-pill active" data-model="ChatGPT (GPT-4o/o3)">ChatGPT</button>
+            <button class="model-pill" data-model="Claude 3.5 Sonnet">Claude 3.5</button>
+            <button class="model-pill" data-model="Gemini 2.0 Flash/Pro">Gemini 2.0</button>
+        </div>
+
+        <div class="search-bar-wrapper">
+            <textarea id="promptInput" placeholder="Type your rough idea here... (e.g., 'write a python script for a calculator')"></textarea>
+            <div class="action-row">
+                <button id="optimizeBtn" class="primary-btn">Optimize <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <div id="outputContainer" class="output-wrapper hidden">
+            <div class="output-header">
+                <span>Optimized Result</span>
+                <button id="copyBtn" class="icon-btn"><i class="fa-regular fa-copy"></i> Copy</button>
+            </div>
+            <div id="optimizedOutput" class="output-content"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
